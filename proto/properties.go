@@ -31,9 +31,10 @@
 
 package proto
 
+
 /*
- * Routines for encoding data into the wire format for protocol buffers.
- */
+* Routines for encoding data into the wire format for protocol buffers.
+*/
 
 import (
 	"fmt"
@@ -450,6 +451,7 @@ func getPropertiesLocked(t reflect.Type) *StructProperties {
 // The generated code will register the generated maps by calling RegisterEnum.
 
 var enumValueMaps = make(map[string]map[string]int32)
+var enumUnusedNameMap = make(map[string]map[int32]string)
 
 // RegisterEnum is called from the generated code to install the enum descriptor
 // maps into the global table to aid parsing text format protocol buffers.
@@ -458,6 +460,7 @@ func RegisterEnum(typeName string, unusedNameMap map[int32]string, valueMap map[
 		panic("proto: duplicate enum registered: " + typeName)
 	}
 	enumValueMaps[typeName] = valueMap
+	enumUnusedNameMap[typeName] = unusedNameMap
 }
 
 // EnumValueMap returns the mapping from names to integers of the
@@ -472,7 +475,43 @@ var (
 	protoTypedNils = make(map[string]Message)      // a map from proto names to typed nil pointers
 	protoMapTypes  = make(map[string]reflect.Type) // a map from proto names to map types
 	revProtoTypes  = make(map[reflect.Type]string)
+	strProtoTypes  = make(map[string]reflect.Type)
 )
+
+func strFirstToUpper(str string) string {
+	str = strings.ToLower(str)
+	temp := strings.Split(str, "_")
+	var upperStr string
+	for y := 0; y < len(temp)-1; y++ {
+		vv := []rune(temp[y])
+
+		for i := 0; i < len(vv); i++ {
+			if i == 0 {
+				vv[i] -= 32
+				upperStr += string(vv[i]) // + string(vv[i+1])
+			} else {
+				upperStr += string(vv[i])
+			}
+		}
+
+	}
+	return upperStr
+}
+
+func GetNameByCmd(cmd int32) string {
+	for _, v := range enumUnusedNameMap {
+		for index, val := range v {
+			if index == cmd {
+				val = strFirstToUpper(val)
+				return val
+			}
+		}
+	}
+	return ""
+}
+func GetProtoType(name string) reflect.Type {
+	return strProtoTypes[name]
+}
 
 // RegisterType is called from generated code and maps from the fully qualified
 // proto name to the type (pointer to struct) of the protocol buffer.
@@ -491,6 +530,7 @@ func RegisterType(x Message, name string) {
 		protoTypedNils[name] = reflect.Zero(t).Interface().(Message)
 	}
 	revProtoTypes[t] = name
+	strProtoTypes[name[strings.LastIndex(name, ".")+1:]] = t
 }
 
 // RegisterMapType is called from generated code and maps from the fully qualified
