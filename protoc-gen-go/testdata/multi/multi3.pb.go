@@ -5,7 +5,7 @@ package multitest
 
 import (
 	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
+	proto "github.com/keonjeo/protobuf/proto"
 	math "math"
 )
 
